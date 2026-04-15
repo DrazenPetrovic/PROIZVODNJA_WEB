@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//d/WEB_KOMERCIJALA/KOMERCIJALA_WEB/src/components/**)",
+      "Read(//d/WEB_KOMERCIJALA/KOMERCIJALA_WEB/src/routes/**)",
+      "Read(//d/WEB_KOMERCIJALA/KOMERCIJALA_WEB/src/controllers/**)",
+      "Read(//d/WEB_KOMERCIJALA/KOMERCIJALA_WEB/src/config/**)",
+      "Read(//d/WEB_KOMERCIJALA/KOMERCIJALA_WEB/src/services/**)",
+      "Read(//d/WEB_KOMERCIJALA/KOMERCIJALA_WEB/src/middleware/**)",
+      "Read(//d/WEB_KOMERCIJALA/KOMERCIJALA_WEB/src/utils/**)",
+      "Read(//d/WEB_KOMERCIJALA/KOMERCIJALA_WEB/**)",
+      "Read(//d/WEB_KOMERCIJALA/KOMERCIJALA_WEB/src/**)"
+    ]
+  }
+}
