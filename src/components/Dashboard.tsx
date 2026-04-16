@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   LogOut,
   ClipboardList,
@@ -7,6 +7,7 @@ import {
   Layers,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   Factory,
 } from 'lucide-react';
 
@@ -20,32 +21,51 @@ type MenuSection =
   | 'radni_nalozi'
   | 'materijali'
   | 'zaposleni'
-  | 'klisea'
+  | 'klisea_zaduzivanje'
   | null;
 
 const PRIMARY = '#785E9E';
 
-export function Dashboard({ username, vrstaRadnika, onLogout }: DashboardProps) {
+const kliseaSubmenu = [
+  { id: 'klisea_zaduzivanje', label: 'Zaduživanje klišea' },
+];
+
+export function Dashboard(props: DashboardProps) {
+  const { onLogout } = props;
   const [activeSection, setActiveSection] = useState<MenuSection>(null);
   const [navCollapsed, setNavCollapsed] = useState(false);
+  const [kliseaOpen, setKliseaOpen] = useState(false);
+  const kliseaRef = useRef<HTMLDivElement>(null);
 
-  const vrsta = Number(vrstaRadnika);
+  // Zatvori podmeni klikom van njega
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (kliseaRef.current && !kliseaRef.current.contains(e.target as Node)) {
+        setKliseaOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-  const allMenuItems = [
-    { id: 'radni_nalozi', label: 'Radni nalozi', icon: ClipboardList, color: 'text-blue-600',   bg: 'bg-blue-50' },
-    { id: 'materijali',   label: 'Materijali',   icon: Package,       color: 'text-green-600',  bg: 'bg-green-50' },
-    { id: 'zaposleni',    label: 'Zaposleni',    icon: Users,         color: 'text-orange-600', bg: 'bg-orange-50' },
-    { id: 'klisea',       label: 'Klišea',       icon: Layers,        color: 'text-indigo-600', bg: 'bg-indigo-50' },
+  const simpleMenuItems = [
+    { id: 'radni_nalozi', label: 'Radni nalozi', icon: ClipboardList },
+    { id: 'materijali',   label: 'Materijali',   icon: Package },
+    { id: 'zaposleni',    label: 'Zaposleni',    icon: Users },
   ];
+
+  const isKliseaActive = activeSection?.startsWith('klisea') ?? false;
 
   const renderContent = () => {
     if (!activeSection) return null;
+
     const labels: Record<Exclude<MenuSection, null>, string> = {
-      radni_nalozi: 'Radni nalozi',
-      materijali:   'Materijali',
-      zaposleni:    'Zaposleni',
-      klisea:       'Klišea',
+      radni_nalozi:      'Radni nalozi',
+      materijali:        'Materijali',
+      zaposleni:         'Zaposleni',
+      klisea_zaduzivanje: 'Zaduživanje klišea',
     };
+
     return (
       <div className="p-2">
         <h2 className="text-base font-semibold mb-2" style={{ color: PRIMARY }}>
@@ -64,12 +84,11 @@ export function Dashboard({ username, vrstaRadnika, onLogout }: DashboardProps) 
   return (
     <div className="h-screen bg-gray-100 flex flex-col overflow-hidden">
 
-      {/* ─── TOP BAR ─── kompaktan, sve u jednom redu ─── */}
+      {/* ─── TOP BAR ─── */}
       <div
         className="flex-shrink-0 bg-white flex items-center gap-1 px-2"
         style={{ borderBottom: `2px solid ${PRIMARY}`, height: '36px', minHeight: '36px' }}
       >
-        {/* Logo + naziv firme */}
         <Factory className="w-4 h-4 flex-shrink-0" style={{ color: PRIMARY }} />
         <span className="font-bold text-sm whitespace-nowrap" style={{ color: PRIMARY }}>
           Proizvodnja
@@ -77,16 +96,17 @@ export function Dashboard({ username, vrstaRadnika, onLogout }: DashboardProps) 
 
         <span className="text-gray-300 mx-1 text-xs">|</span>
 
-        {/* NAV DUGMAD — horizontalno, skrivaju se ako je kolaps */}
         {!navCollapsed && (
           <div className="flex items-center gap-0.5 overflow-x-auto flex-1 min-w-0">
-            {allMenuItems.map((item) => {
+
+            {/* Obični meniji */}
+            {simpleMenuItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeSection === item.id;
               return (
                 <button
                   key={item.id}
-                  onClick={() => setActiveSection(item.id as MenuSection)}
+                  onClick={() => { setActiveSection(item.id as MenuSection); setKliseaOpen(false); }}
                   className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${
                     isActive ? 'text-white' : 'text-gray-600 hover:bg-gray-100'
                   }`}
@@ -98,17 +118,58 @@ export function Dashboard({ username, vrstaRadnika, onLogout }: DashboardProps) 
                 </button>
               );
             })}
+
+            {/* Klišea s podmenijem */}
+            <div ref={kliseaRef} className="relative flex-shrink-0">
+              <button
+                onClick={() => setKliseaOpen(!kliseaOpen)}
+                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium whitespace-nowrap transition-all ${
+                  isKliseaActive ? 'text-white' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+                style={isKliseaActive ? { backgroundColor: PRIMARY } : {}}
+                title="Klišea"
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Klišea</span>
+                <ChevronRight
+                  className={`w-3 h-3 transition-transform ${kliseaOpen ? 'rotate-90' : ''}`}
+                />
+              </button>
+
+              {/* Dropdown podmeni */}
+              {kliseaOpen && (
+                <div
+                  className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-max"
+                  style={{ borderTop: `2px solid ${PRIMARY}` }}
+                >
+                  {kliseaSubmenu.map((sub) => (
+                    <button
+                      key={sub.id}
+                      onClick={() => {
+                        setActiveSection(sub.id as MenuSection);
+                        setKliseaOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-1.5 text-xs whitespace-nowrap transition-all ${
+                        activeSection === sub.id
+                          ? 'text-white'
+                          : 'text-gray-600 hover:bg-gray-50'
+                      }`}
+                      style={activeSection === sub.id ? { backgroundColor: PRIMARY } : {}}
+                    >
+                      {sub.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
           </div>
         )}
 
         {navCollapsed && <div className="flex-1" />}
 
-        {/* Desno: korisnik + toggle + odjava */}
+        {/* Desno: toggle + odjava */}
         <div className="flex items-center gap-1 flex-shrink-0 ml-auto">
-          <span className="text-xs text-gray-500 whitespace-nowrap hidden md:inline">
-            <span style={{ color: PRIMARY }} className="font-medium">{username}</span>
-          </span>
-
           <button
             onClick={() => setNavCollapsed(!navCollapsed)}
             className="p-0.5 rounded hover:bg-gray-100 transition-all"
@@ -134,7 +195,7 @@ export function Dashboard({ username, vrstaRadnika, onLogout }: DashboardProps) 
         </div>
       </div>
 
-      {/* ─── SADRŽAJ ─── zauzima ostatak ekrana ─── */}
+      {/* ─── SADRŽAJ ─── */}
       <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-white">
         {activeSection !== null && renderContent()}
       </main>
