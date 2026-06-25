@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { theme } from "../theme";
-import { Package, RefreshCw, CheckCircle, Clock, BellRing } from "lucide-react";
+import { getCurrentUser } from "../utils/auth";
+import { Package, RefreshCw, BellRing } from "lucide-react";
 
 const PRIMARY   = theme.primary;
 const SECONDARY = theme.secondary;
@@ -17,6 +18,7 @@ interface NarucenaKutija {
   stampano:             number;
   kolicina_proizvoda:   number;
   datum_dostave:        string;
+  datum_narudzbe:       string;
 }
 
 function formatDate(dateStr: string): string {
@@ -24,6 +26,15 @@ function formatDate(dateStr: string): string {
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   return `${dd}.${mm}.${d.getFullYear()}`;
+}
+
+function formatDateTime(dateStr: string): string {
+  const d = new Date(dateStr);
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${dd}.${mm}.${d.getFullYear()} ${hh}:${min}`;
 }
 
 function getDateKey(dateStr: string): string {
@@ -58,11 +69,66 @@ export function RadOperaterKutije() {
   const [loading,      setLoading]      = useState(true);
   const [lastUpdate,   setLastUpdate]   = useState<Date | null>(null);
   const [noviUnosi,    setNoviUnosi]    = useState<NarucenaKutija[]>([]);
+  const [potvrda,           setPotvrda]           = useState<NarucenaKutija | null>(null);
+  const [potvrdaLoading,    setPotvrdaLoading]    = useState(false);
+  const [potvrdaError,      setPotvrdaError]      = useState("");
+  const [napomenaOperatera, setNapomenaOperatera] = useState("");
+  const [zavrseneSifre,     setZavrseneSifre]     = useState<Set<number>>(new Set());
 
   // Set poznatih sifra_tabele — inicijaliziramo pri prvom fetchu, ne okidamo modal
   const poznateSifre = useRef<Set<number>>(new Set());
   const prviLoad     = useRef(true);
   const audioRef     = useRef<HTMLAudioElement | null>(null);
+
+  const fetchZavrseno = useCallback(async () => {
+    try {
+      const res  = await fetch(`${API_URL}/api/kutije/zavrseno`, { credentials: "include" });
+      const json = await res.json();
+      if (json.success) {
+        setZavrseneSifre(new Set(json.data.map((r: { sifra_tabele: number }) => r.sifra_tabele)));
+      }
+    } catch { /* tihi fail */ }
+  }, []);
+
+  const handlePotvrda = async () => {
+    if (!potvrda) return;
+    setPotvrdaLoading(true);
+    setPotvrdaError("");
+    const user = getCurrentUser();
+    try {
+      const res = await fetch(`${API_URL}/api/kutije/potvrda`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sifra_tabele:         potvrda.sifra_tabele,
+          sifra_terena_dostava: potvrda.sifra_terena_dostava,
+          sifra_partnera:       potvrda.sifra_partnera,
+          naziv_partnera:       potvrda.naziv_partnera,
+          sifra_proizvoda:      potvrda.sifra_proizvoda,
+          naziv_proizvoda:      potvrda.naziv_proizvoda,
+          napomena:             potvrda.napomena,
+          kolicina_proizvoda:   potvrda.kolicina_proizvoda,
+          id_operatera:         user?.sifraRadnika,
+          naziv_operatera:      user?.username,
+          napomena_operatera:   napomenaOperatera,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setPotvrda(null);
+        setNapomenaOperatera("");
+        fetchData();
+        fetchZavrseno();
+      } else {
+        setPotvrdaError(json.message || "Greška pri upisu.");
+      }
+    } catch {
+      setPotvrdaError("Greška pri povezivanju sa serverom.");
+    } finally {
+      setPotvrdaLoading(false);
+    }
+  };
 
   const fetchData = useCallback(async () => {
     try {
@@ -99,9 +165,10 @@ export function RadOperaterKutije() {
 
   useEffect(() => {
     fetchData();
+    fetchZavrseno();
     const interval = setInterval(fetchData, 60_000);
     return () => clearInterval(interval);
-  }, [fetchData]);
+  }, [fetchData, fetchZavrseno]);
 
   // Grupišemo po datumu dostave
   const grouped: { dateKey: string; label: string; items: NarucenaKutija[] }[] = [];
@@ -117,6 +184,83 @@ export function RadOperaterKutije() {
 
   return (
     <>
+      {/* ─── MODAL POTVRDA ZAVRŠETKA ─── */}
+      {potvrda && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: "rgba(0,0,0,0.55)" }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+
+            <div className="px-6 py-4" style={{ backgroundColor: PRIMARY }}>
+              <p className="text-white font-bold text-base">Potvrda završetka</p>
+              <p className="text-white opacity-70 text-xs mt-0.5">Da li ste završili rad na ovom proizvodu?</p>
+            </div>
+
+            <div className="px-6 py-4 space-y-2">
+              <div className="flex justify-between items-start">
+                <span className="text-sm text-gray-500">Proizvod</span>
+                <span className="text-sm font-semibold text-gray-800 text-right max-w-[60%]">{potvrda.naziv_proizvoda}</span>
+              </div>
+              {potvrda.naziv_partnera && (
+                <div className="flex justify-between items-start">
+                  <span className="text-sm text-gray-500">Partner</span>
+                  <span className="text-sm text-gray-700 text-right max-w-[60%]">{potvrda.naziv_partnera}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-500">Količina</span>
+                <span className="text-sm font-bold" style={{ color: PRIMARY }}>{formatKolicina(potvrda.kolicina_proizvoda)} kom</span>
+              </div>
+              {potvrda.napomena && (
+                <div className="flex justify-between items-start">
+                  <span className="text-sm text-gray-500">Napomena</span>
+                  <span className="text-sm text-gray-500 italic text-right max-w-[60%]">{potvrda.napomena}</span>
+                </div>
+              )}
+              <div>
+                <label className="block text-sm text-gray-500 mb-1">Napomena operatera</label>
+                <textarea
+                  rows={2}
+                  value={napomenaOperatera}
+                  onChange={(e) => setNapomenaOperatera(e.target.value)}
+                  placeholder="Opcionalna napomena..."
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none resize-none"
+                  onFocus={(e) => (e.target.style.borderColor = PRIMARY)}
+                  onBlur={(e) => (e.target.style.borderColor = "rgb(209 213 219)")}
+                />
+              </div>
+
+              {potvrdaError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-xs">
+                  {potvrdaError}
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 pb-5 flex gap-3 justify-end">
+              <button
+                onClick={() => { setPotvrda(null); setPotvrdaError(""); }}
+                disabled={potvrdaLoading}
+                className="px-5 py-2 rounded-xl text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 transition disabled:opacity-50"
+              >
+                Odustani
+              </button>
+              <button
+                onClick={handlePotvrda}
+                disabled={potvrdaLoading}
+                className="px-6 py-2 rounded-xl text-white font-semibold text-sm transition disabled:opacity-50"
+                style={{ backgroundColor: SECONDARY }}
+                onMouseEnter={(e) => !potvrdaLoading && (e.currentTarget.style.backgroundColor = "#7aad3a")}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = SECONDARY)}
+              >
+                {potvrdaLoading ? "Upisujem..." : "Da, završeno"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ─── MODAL NOVI UNOSI ─── */}
       {noviUnosi.length > 0 && (
         <div
@@ -170,7 +314,7 @@ export function RadOperaterKutije() {
         {/* ─── LIJEVI PANEL 25% ─── */}
         <div
           className="flex flex-col overflow-hidden border-r"
-          style={{ width: "25%", borderColor: `${PRIMARY}33` }}
+          style={{ width: "40%", borderColor: `${PRIMARY}33` }}
         >
           {/* Zaglavlje */}
           <div
@@ -214,7 +358,7 @@ export function RadOperaterKutije() {
                 {/* Datum separator */}
                 <div className="flex items-center gap-2 mb-1.5">
                   <div className="flex-1 h-px" style={{ backgroundColor: `${PRIMARY}44` }} />
-                  <span className="text-xs font-bold px-1" style={{ color: PRIMARY }}>
+                  <span className="font-bold px-1" style={{ color: PRIMARY, fontSize: "0.9rem" }}>
                     {group.label}
                   </span>
                   <div className="flex-1 h-px" style={{ backgroundColor: `${PRIMARY}44` }} />
@@ -222,53 +366,59 @@ export function RadOperaterKutije() {
 
                 {/* Stavke za taj datum */}
                 <div className="space-y-1.5">
-                  {group.items.map((item) => (
+                  {group.items.map((item) => {
+                    const isLogo      = item.naziv_proizvoda.toUpperCase().includes("LOGO");
+                    const isZavrseno  = zavrseneSifre.has(item.sifra_tabele);
+                    const bgColor     = isZavrseno ? "#9ca3af" : isLogo ? PRIMARY   : SECONDARY;
+                    const accentColor = isZavrseno ? "#e5e7eb" : isLogo ? SECONDARY : PRIMARY;
+                    return (
                     <div
                       key={item.sifra_tabele}
-                      className="rounded-lg border px-2.5 py-2"
+                      className={`rounded-lg border px-3 py-2.5 flex flex-col gap-1 transition-opacity ${isZavrseno ? "opacity-50 cursor-not-allowed" : "cursor-pointer active:opacity-80"}`}
                       style={{
-                        borderColor:     item.stampano ? `${SECONDARY}88` : `${PRIMARY}33`,
-                        backgroundColor: item.stampano ? `${SECONDARY}0D` : "white",
+                        borderColor:     isZavrseno ? "#9ca3af" : item.stampano ? bgColor : `${bgColor}88`,
+                        backgroundColor: bgColor,
                       }}
+                      onClick={() => { if (!isZavrseno) { setPotvrda(item); setPotvrdaError(""); setNapomenaOperatera(""); } }}
                     >
-                      {/* Glavni red: naziv + količina */}
+                      {/* Gornji red: naziv proizvoda + količina */}
                       <div className="flex items-start justify-between gap-2">
-                        <span className="text-sm font-semibold text-gray-800 leading-tight flex-1 min-w-0">
-                          {item.naziv_proizvoda}
-                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xl font-bold leading-tight" style={{ color: accentColor }}>
+                            {item.naziv_proizvoda}
+                            {isZavrseno && <span className="ml-2 text-xs font-normal opacity-80">✓ završeno</span>}
+                          </div>
+                          {item.naziv_partnera && (
+                            <div className="text-base text-white opacity-80 truncate mt-0.5" title={item.naziv_partnera}>
+                              {item.naziv_partnera}
+                            </div>
+                          )}
+                        </div>
                         <div className="flex-shrink-0 text-right leading-tight">
-                          <div className="text-base font-bold" style={{ color: PRIMARY }}>
+                          <div className="text-2xl font-bold" style={{ color: accentColor }}>
                             {formatKolicina(item.kolicina_proizvoda)}
                           </div>
-                          <div className="text-xs text-gray-400">kom</div>
+                          <div className="text-xs text-white opacity-70">kom</div>
+                          {item.datum_narudzbe && (
+                            <div className="text-xs text-white opacity-60 mt-0.5">
+                              {formatDateTime(item.datum_narudzbe)}
+                            </div>
+                          )}
                         </div>
                       </div>
 
-                      {/* Opciono: partner + stampano */}
-                      {item.naziv_partnera && (
-                        <div className="flex items-center justify-between mt-1 gap-1">
-                          <span className="text-xs text-gray-400 truncate" title={item.naziv_partnera}>
-                            {item.naziv_partnera}
-                          </span>
-                          {item.stampano ? (
-                            <CheckCircle className="w-3 h-3 flex-shrink-0" style={{ color: SECONDARY }} />
-                          ) : (
-                            <Clock className="w-3 h-3 flex-shrink-0 text-gray-300" />
-                          )}
-                        </div>
-                      )}
-
-                      {/* Opciono: napomena */}
+                      {/* Napomena na dnu */}
                       {item.napomena && (
                         <div
-                          className="text-xs text-gray-400 mt-0.5 italic truncate"
+                          className="text-xs text-white opacity-60 italic truncate mt-auto pt-1 border-t border-white border-opacity-20"
                           title={item.napomena}
                         >
                           {item.napomena}
                         </div>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ))}
