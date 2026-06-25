@@ -6,6 +6,7 @@ import { env } from './config/env.js';
 import healthRoutes from './routes/health.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import kliseaRoutes from './routes/klisea.routes.js';
+import kutijeRoutes from './routes/kutije.routes.js';
 
 export const createApp = () => {
   const app = express();
@@ -22,6 +23,7 @@ export const createApp = () => {
   app.use('/api', healthRoutes);
   app.use('/api/auth', authRoutes);
   app.use('/api/klise-zaduzivanje', kliseaRoutes);
+  app.use('/api/kutije', kutijeRoutes);
 
   return app;
 };

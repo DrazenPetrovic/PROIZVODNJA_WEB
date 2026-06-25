@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import ZaduzenjeKlisea from './ZaduzenjeKlisea';
+import { RadOperaterKutije } from './RadOperaterKutije';
 import {
   LogOut,
   ClipboardList,
@@ -26,6 +27,7 @@ type MenuSection =
   | null;
 
 import { theme } from '../theme';
+import { getNazivVrste } from '../constants/vrsteRadnika';
 const PRIMARY   = theme.primary;
 const SECONDARY = theme.secondary;
 
@@ -34,8 +36,10 @@ const kliseaSubmenu = [
 ];
 
 export function Dashboard(props: DashboardProps) {
-  const { onLogout } = props;
-  const [activeSection, setActiveSection] = useState<MenuSection>(null);
+  const { onLogout, username, vrstaRadnika } = props;
+  const [activeSection, setActiveSection] = useState<MenuSection>(
+    vrstaRadnika === 7 ? 'rad' : null
+  );
   const [navCollapsed, setNavCollapsed] = useState(false);
   const [kliseaOpen, setKliseaOpen] = useState(false);
   const simpleMenuItems = [
@@ -48,6 +52,7 @@ export function Dashboard(props: DashboardProps) {
 
   const renderContent = () => {
     if (activeSection === 'klisea_zaduzivanje') return <ZaduzenjeKlisea />;
+    if (activeSection === 'rad' && vrstaRadnika === 7) return <RadOperaterKutije />;
 
     const labels: Record<Exclude<MenuSection, 'klisea_zaduzivanje' | null>, string> = {
       radni_nalozi: 'Radni nalozi',
@@ -131,6 +136,16 @@ export function Dashboard(props: DashboardProps) {
 
         {/* Desno: toggle + odjava */}
         <div className="flex items-center gap-1 flex-shrink-0 ml-auto">
+
+          <span className="text-xs font-medium whitespace-nowrap" style={{ color: SECONDARY }}>
+            {username}
+          </span>
+          <span className="text-xs font-medium whitespace-nowrap" style={{ color: PRIMARY }}>
+            {getNazivVrste(vrstaRadnika)}
+          </span>
+
+          <span className="text-gray-300 text-xs">|</span>
+
           <button
             onClick={() => setNavCollapsed(!navCollapsed)}
             className="p-0.5 rounded hover:bg-gray-100 transition-all"
@@ -179,7 +194,7 @@ export function Dashboard(props: DashboardProps) {
       )}
 
       {/* ─── SADRŽAJ ─── */}
-      <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-white">
+      <main className="flex-1 min-h-0 overflow-hidden bg-white">
         {activeSection !== null && renderContent()}
       </main>
     </div>

@@ -109,14 +109,14 @@ export function LoginPanel({ onLoginSuccess }: LoginPanelProps) {
         className="min-h-screen flex items-center justify-center p-4"
         style={{ background: `linear-gradient(135deg, ${PRIMARY}15, ${SECONDARY}15)` }}
       >
-        <div className="w-full max-w-sm">
+        <div className="w-full max-w-sm" style={{ zoom: "1.3" }}>
           <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
 
             <div className="px-6 pt-6 pb-5 text-center">
               <div className="flex justify-center mb-3">
                 <img
-                  src="/foto/karpas_logo_software.png"
-                  alt="Karpas Logo"
+                  src="/foto/IKONA.png"
+                  alt="Logo"
                   className="h-20 object-contain"
                 />
               </div>
@@ -161,21 +161,18 @@ export function LoginPanel({ onLoginSuccess }: LoginPanelProps) {
       className="min-h-screen flex items-center justify-center p-4"
       style={{ background: `linear-gradient(135deg, ${PRIMARY}15, ${SECONDARY}15)` }}
     >
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-sm" style={{ zoom: "1.3" }}>
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
 
           {/* Header — logo */}
           <div className="px-6 pt-5 pb-4 text-center" style={{ borderBottom: `3px solid ${PRIMARY}` }}>
             <div className="flex justify-center mb-3">
               <img
-                src="/foto/karpas_logo_software.png"
-                alt="Karpas Logo"
+                src="/foto/IKONA.png"
+                alt="Logo"
                 className="h-20 object-contain"
               />
             </div>
-            <h1 className="text-lg font-bold" style={{ color: PRIMARY }}>
-              Prijava
-            </h1>
           </div>
 
           {/* Tabs */}
