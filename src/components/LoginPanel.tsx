@@ -115,7 +115,7 @@ export function LoginPanel({ onLoginSuccess }: LoginPanelProps) {
             <div className="px-6 pt-6 pb-5 text-center">
               <div className="flex justify-center mb-3">
                 <img
-                  src="/foto/IKONA.png"
+                  src={`${import.meta.env.BASE_URL}foto/IKONA.png`}
                   alt="Logo"
                   className="h-20 object-contain"
                 />
@@ -168,7 +168,7 @@ export function LoginPanel({ onLoginSuccess }: LoginPanelProps) {
           <div className="px-6 pt-5 pb-4 text-center" style={{ borderBottom: `3px solid ${PRIMARY}` }}>
             <div className="flex justify-center mb-3">
               <img
-                src="/foto/IKONA.png"
+                src={`${import.meta.env.BASE_URL}foto/IKONA.png`}
                 alt="Logo"
                 className="h-20 object-contain"
               />

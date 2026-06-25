@@ -37,7 +37,7 @@ function formatKolicina(k: number): string {
 
 function playNotifikacija(ref: React.MutableRefObject<HTMLAudioElement | null>) {
   try {
-    const audio = new Audio("/zvuk/notifikacija_proizvodnja_30s.wav");
+    const audio = new Audio(`${import.meta.env.BASE_URL}zvuk/notifikacija_proizvodnja_30s.wav`);
     ref.current = audio;
     audio.play();
   } catch {
