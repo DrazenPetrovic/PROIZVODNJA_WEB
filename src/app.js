@@ -11,9 +11,14 @@ import kutijeRoutes from './routes/kutije.routes.js';
 export const createApp = () => {
   const app = express();
 
+  const localhostDevOrigin = /^http:\/\/localhost:\d+$/;
+
   app.use(
     cors({
-      origin: env.FRONTEND_URL,
+      origin:
+        env.NODE_ENV === 'production'
+          ? env.FRONTEND_URL
+          : [env.FRONTEND_URL, localhostDevOrigin],
       credentials: true,
     })
   );
