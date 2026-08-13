@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { theme } from "../theme";
 import { getCurrentUser } from "../utils/auth";
-import { Package, RefreshCw, BellRing } from "lucide-react";
+import { Package, RefreshCw, BellRing, AlertTriangle } from "lucide-react";
 
 const PRIMARY   = theme.primary;
 const SECONDARY = theme.secondary;
@@ -19,6 +19,15 @@ interface NarucenaKutija {
   kolicina_proizvoda:   number;
   datum_dostave:        string;
   datum_narudzbe:       string;
+}
+
+interface IzmjenaProizvoda {
+  sifra_tabele:          number;
+  naziv_partnera:        string;
+  stara_sifra_proizvoda: number;
+  stari_naziv_proizvoda: string;
+  nova_sifra_proizvoda:  number;
+  novi_naziv_proizvoda:  string;
 }
 
 function formatDate(dateStr: string): string {
@@ -69,6 +78,8 @@ export function RadOperaterKutije() {
   const [loading,      setLoading]      = useState(true);
   const [lastUpdate,   setLastUpdate]   = useState<Date | null>(null);
   const [noviUnosi,    setNoviUnosi]    = useState<NarucenaKutija[]>([]);
+  const [izmjeneProizvoda, setIzmjeneProizvoda] = useState<IzmjenaProizvoda[]>([]);
+  const [pendingData,      setPendingData]      = useState<NarucenaKutija[] | null>(null);
   const [potvrda,           setPotvrda]           = useState<NarucenaKutija | null>(null);
   const [potvrdaLoading,    setPotvrdaLoading]    = useState(false);
   const [potvrdaError,      setPotvrdaError]      = useState("");
@@ -79,6 +90,8 @@ export function RadOperaterKutije() {
   const poznateSifre = useRef<Set<number>>(new Set());
   const prviLoad     = useRef(true);
   const audioRef     = useRef<HTMLAudioElement | null>(null);
+  // Snimak posljednjih primijenjenih podataka — koristi se za poređenje sa svježe dohvaćenim
+  const dataRef       = useRef<NarucenaKutija[]>([]);
 
   const fetchZavrseno = useCallback(async () => {
     try {
@@ -144,6 +157,8 @@ export function RadOperaterKutije() {
         // Inicijalni load — samo zapamtimo sifre, bez modala
         sorted.forEach((item) => poznateSifre.current.add(item.sifra_tabele));
         prviLoad.current = false;
+        setData(sorted);
+        dataRef.current = sorted;
       } else {
         // Pronađi nove unose
         const novi = sorted.filter((item) => !poznateSifre.current.has(item.sifra_tabele));
@@ -152,9 +167,35 @@ export function RadOperaterKutije() {
           setNoviUnosi(novi);
           playNotifikacija(audioRef);
         }
+
+        // Provjeri da li je magacioner u međuvremenu promijenio proizvod
+        // na nekoj već poznatoj narudžbi (sifra_proizvoda se razlikuje)
+        const izmjene: IzmjenaProizvoda[] = [];
+        sorted.forEach((item) => {
+          const staro = dataRef.current.find((d) => d.sifra_tabele === item.sifra_tabele);
+          if (staro && staro.sifra_proizvoda !== item.sifra_proizvoda) {
+            izmjene.push({
+              sifra_tabele:          item.sifra_tabele,
+              naziv_partnera:        item.naziv_partnera,
+              stara_sifra_proizvoda: staro.sifra_proizvoda,
+              stari_naziv_proizvoda: staro.naziv_proizvoda,
+              nova_sifra_proizvoda:  item.sifra_proizvoda,
+              novi_naziv_proizvoda:  item.naziv_proizvoda,
+            });
+          }
+        });
+
+        if (izmjene.length > 0) {
+          // Ne prepisuj odmah prikaz — sačekaj da operater potvrdi izmjenu
+          setIzmjeneProizvoda(izmjene);
+          setPendingData(sorted);
+          playNotifikacija(audioRef);
+        } else {
+          setData(sorted);
+          dataRef.current = sorted;
+        }
       }
 
-      setData(sorted);
       setLastUpdate(new Date());
     } catch {
       // tihi fail — pokušava ponovo za 60s
@@ -162,6 +203,16 @@ export function RadOperaterKutije() {
       setLoading(false);
     }
   }, []);
+
+  const primijeniIzmjene = () => {
+    if (pendingData) {
+      setData(pendingData);
+      dataRef.current = pendingData;
+      setPendingData(null);
+    }
+    setIzmjeneProizvoda([]);
+    stopNotifikacija(audioRef);
+  };
 
   useEffect(() => {
     fetchData();
@@ -303,6 +354,64 @@ export function RadOperaterKutije() {
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = SECONDARY)}
               >
                 OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL IZMJENA PROIZVODA (magacioner ispravio šifru) ─── */}
+      {izmjeneProizvoda.length > 0 && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: "rgba(0,0,0,0.6)" }}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            style={{ width: "66vw", height: "66vh" }}
+          >
+            {/* Header */}
+            <div className="px-6 py-4 flex items-center gap-3 flex-shrink-0" style={{ backgroundColor: "#dc2626" }}>
+              <AlertTriangle className="w-5 h-5 text-white flex-shrink-0" />
+              <span className="text-white font-bold text-base">
+                {izmjeneProizvoda.length === 1
+                  ? "Magacioner je izmijenio proizvod na narudžbi"
+                  : `Magacioner je izmijenio proizvod na ${izmjeneProizvoda.length} narudžbe`}
+              </span>
+            </div>
+
+            {/* Tabela izmjena */}
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-gray-500 border-b">
+                    <th className="py-2 pr-3">Partner</th>
+                    <th className="py-2 pr-3">Stari proizvod</th>
+                    <th className="py-2 pr-3">Novi proizvod</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {izmjeneProizvoda.map((iz) => (
+                    <tr key={iz.sifra_tabele} className="border-b border-gray-100">
+                      <td className="py-2 pr-3 text-gray-700">{iz.naziv_partnera || "-"}</td>
+                      <td className="py-2 pr-3 text-red-600 font-medium">{iz.stari_naziv_proizvoda}</td>
+                      <td className="py-2 pr-3 text-green-700 font-semibold">{iz.novi_naziv_proizvoda}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 pb-5 pt-1 flex justify-end flex-shrink-0">
+              <button
+                onClick={primijeniIzmjene}
+                className="px-8 py-2 rounded-xl text-white font-semibold text-sm transition-all"
+                style={{ backgroundColor: SECONDARY }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#7aad3a")}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = SECONDARY)}
+              >
+                Razumijem, primijeni izmjene
               </button>
             </div>
           </div>
