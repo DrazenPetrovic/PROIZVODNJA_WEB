@@ -499,7 +499,7 @@ export function RadOperaterKutije() {
                           </div>
                           {item.naziv_partnera && (
                             <div className="text-base text-white opacity-80 truncate mt-0.5" title={item.naziv_partnera}>
-                              {item.naziv_partnera}
+                              {item.naziv_partnera} ({item.napomena || "-"})
                             </div>
                           )}
                         </div>
