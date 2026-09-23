@@ -1,27 +1,17 @@
+// Šifre usklađene sa kolonom vrsta_radnika (vidi public/vrstaRadnika.txt)
 export const VRSTE_RADNIKA: Record<number, string> = {
-  [-1]: 'Osnivač',
-  0:    'Ne zaposlen',
-  1:    'Direktor',
-  2:    'Komercijalista',
-  3:    'Finansije',
-  4:    'Vozač',
-  5:    'Operater',
-  6:    'Magacioner',
-  7:    'Operater kutije',
-  8:    'Nedefinisano',
-  9:    'Nedefinisano',
-  10:   'Nedefinisano',
-  11:   'Nedefinisano',
-  12:   'Nedefinisano',
-  13:   'Nedefinisano',
-  14:   'Nedefinisano',
-  15:   'Nedefinisano',
-  16:   'Nedefinisano',
-  17:   'Nedefinisano',
-  18:   'Nedefinisano',
-  19:   'Nedefinisano',
-  20:   'Nedefinisano',
+  0:  'Ostalo',
+  1:  'Vlasnik',
+  2:  'Komercijala',
+  3:  'Kancelarija',
+  4:  'Proizvodnja kesa',
+  5:  'Proizvodnja kutija',
+  6:  'Magacin',
+  7:  'Vozač',
+  10: 'Spoljni saradnik',
 };
+
+export const VRSTA_PROIZVODNJA_KUTIJA = 5;
 
 export function getNazivVrste(vrsta: number): string {
   return VRSTE_RADNIKA[vrsta] ?? 'Nedefinisano';

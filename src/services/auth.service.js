@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 import { withConnection } from './db.service.js';
 
-const PROC = 'CALL aplikacija_kese.sp_logovanje_korisnika(?, ?, ?)';
+const PROC = 'CALL erp_proizvodnja.radnici_logovanje(?, ?, ?)';
 
 const buildToken = (username, sifraRadnika, vrstaRadnika) =>
   jwt.sign(

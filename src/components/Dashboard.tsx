@@ -27,7 +27,7 @@ type MenuSection =
   | null;
 
 import { theme } from '../theme';
-import { getNazivVrste } from '../constants/vrsteRadnika';
+import { getNazivVrste, VRSTA_PROIZVODNJA_KUTIJA } from '../constants/vrsteRadnika';
 const PRIMARY   = theme.primary;
 const SECONDARY = theme.secondary;
 
@@ -38,7 +38,7 @@ const kliseaSubmenu = [
 export function Dashboard(props: DashboardProps) {
   const { onLogout, username, vrstaRadnika } = props;
   const [activeSection, setActiveSection] = useState<MenuSection>(
-    vrstaRadnika === 7 ? 'rad' : null
+    vrstaRadnika === VRSTA_PROIZVODNJA_KUTIJA ? 'rad' : null
   );
   const [navCollapsed, setNavCollapsed] = useState(false);
   const [kliseaOpen, setKliseaOpen] = useState(false);
@@ -52,7 +52,7 @@ export function Dashboard(props: DashboardProps) {
 
   const renderContent = () => {
     if (activeSection === 'klisea_zaduzivanje') return <ZaduzenjeKlisea />;
-    if (activeSection === 'rad' && vrstaRadnika === 7) return <RadOperaterKutije />;
+    if (activeSection === 'rad' && vrstaRadnika === VRSTA_PROIZVODNJA_KUTIJA) return <RadOperaterKutije />;
 
     const labels: Record<Exclude<MenuSection, 'klisea_zaduzivanje' | null>, string> = {
       radni_nalozi: 'Radni nalozi',

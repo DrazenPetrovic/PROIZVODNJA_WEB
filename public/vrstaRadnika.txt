@@ -1,0 +1,11 @@
+Vrsta radnika (kolona vrsta_radnika, vraća se kao sifra_vrste iz erp_proizvodnja.radnici_logovanje)
+
+0  Ostalo
+1  Vlasnik
+2  Komercijala
+3  Kancelarija
+4  Proizvodnja kesa
+5  Proizvodnja kutija
+6  Magacin
+7  Vozac
+10 Spoljni saradnik
