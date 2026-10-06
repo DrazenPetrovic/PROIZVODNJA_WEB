@@ -11,6 +11,7 @@ export const VRSTE_RADNIKA: Record<number, string> = {
   10: 'Spoljni saradnik',
 };
 
+export const VRSTA_VLASNIK = 1;
 export const VRSTA_PROIZVODNJA_KUTIJA = 5;
 
 export function getNazivVrste(vrsta: number): string {

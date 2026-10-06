@@ -7,6 +7,9 @@ import healthRoutes from './routes/health.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import kliseaRoutes from './routes/klisea.routes.js';
 import kutijeRoutes from './routes/kutije.routes.js';
+import proizvodiRoutes from './routes/proizvodi.routes.js';
+import narudzbeRoutes from './routes/narudzbe.routes.js';
+import masineRoutes from './routes/masine.routes.js';
 
 export const createApp = () => {
   const app = express();
@@ -29,6 +32,9 @@ export const createApp = () => {
   app.use('/api/auth', authRoutes);
   app.use('/api/klise-zaduzivanje', kliseaRoutes);
   app.use('/api/kutije', kutijeRoutes);
+  app.use('/api/proizvodi', proizvodiRoutes);
+  app.use('/api/narudzbe', narudzbeRoutes);
+  app.use('/api/masine', masineRoutes);
 
   return app;
 };

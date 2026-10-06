@@ -10,7 +10,17 @@ export const pregledKreiranihKlisea = async (req, res) => {
   }
 };
 
-export const zaduzivanjeKlisea = async (req, res) => {
+export const pregledLokacijaKlisea = async (req, res) => {
+  try {
+    const result = await KliseaService.pregledLokacijaKlisea();
+    return res.json(result);
+  } catch (error) {
+    console.error('pregledLokacijaKlisea error:', error);
+    return res.status(503).json({ success: false, message: 'Baza podataka nije dostupna.' });
+  }
+};
+
+export const zaduzivanjeKlisea =async (req, res) => {
   try {
     const { sifraTabele, napomenaRadnika, dimenzije, ladica } = req.body;
 

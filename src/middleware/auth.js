@@ -15,3 +15,11 @@ export const verifyToken = (req, res, next) => {
     return res.status(401).json({ error: 'Nevažeći token' });
   }
 };
+
+// Ide nakon verifyToken — propušta samo vlasnika (vrsta_radnika = 1)
+export const requireVlasnik = (req, res, next) => {
+  if (Number(req.user?.vrstaRadnika) !== 1) {
+    return res.status(403).json({ success: false, message: 'Nemate pravo pristupa.' });
+  }
+  next();
+};

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import ZaduzenjeKlisea from './ZaduzenjeKlisea';
 import { RadOperaterKutije } from './RadOperaterKutije';
+import NarudzbePapirneKese from './NarudzbePapirneKese';
 import {
   LogOut,
   ClipboardList,
@@ -11,6 +12,7 @@ import {
   ChevronUp,
   ChevronRight,
   Factory,
+  ShoppingCart,
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -24,15 +26,20 @@ type MenuSection =
   | 'materijali'
   | 'rad'
   | 'klisea_zaduzivanje'
+  | 'narudzbe_papirne_kese'
   | null;
 
 import { theme } from '../theme';
-import { getNazivVrste, VRSTA_PROIZVODNJA_KUTIJA } from '../constants/vrsteRadnika';
+import { getNazivVrste, VRSTA_PROIZVODNJA_KUTIJA, VRSTA_VLASNIK } from '../constants/vrsteRadnika';
 const PRIMARY   = theme.primary;
 const SECONDARY = theme.secondary;
 
 const kliseaSubmenu = [
   { id: 'klisea_zaduzivanje', label: 'Zaduživanje klišea' },
+];
+
+const narudzbeSubmenu = [
+  { id: 'narudzbe_papirne_kese', label: 'Narudžbe papirne kese' },
 ];
 
 export function Dashboard(props: DashboardProps) {
@@ -42,6 +49,8 @@ export function Dashboard(props: DashboardProps) {
   );
   const [navCollapsed, setNavCollapsed] = useState(false);
   const [kliseaOpen, setKliseaOpen] = useState(false);
+  const [narudzbeOpen, setNarudzbeOpen] = useState(false);
+  const isVlasnik = vrstaRadnika === VRSTA_VLASNIK;
   const simpleMenuItems = [
     { id: 'radni_nalozi', label: 'Radni nalozi', icon: ClipboardList, primary: false },
     { id: 'materijali',   label: 'Materijali',   icon: Package,       primary: false },
@@ -49,15 +58,19 @@ export function Dashboard(props: DashboardProps) {
   ];
 
   const isKliseaActive = activeSection?.startsWith('klisea') ?? false;
+  const isNarudzbeActive = activeSection?.startsWith('narudzbe') ?? false;
 
   const renderContent = () => {
     if (activeSection === 'klisea_zaduzivanje') return <ZaduzenjeKlisea />;
     if (activeSection === 'rad' && vrstaRadnika === VRSTA_PROIZVODNJA_KUTIJA) return <RadOperaterKutije />;
+    if (activeSection?.startsWith('narudzbe') && !isVlasnik) return null;
+    if (activeSection === 'narudzbe_papirne_kese') return <NarudzbePapirneKese />;
 
     const labels: Record<Exclude<MenuSection, 'klisea_zaduzivanje' | null>, string> = {
-      radni_nalozi: 'Radni nalozi',
-      materijali:   'Materijali',
-      rad:          'RAD',
+      radni_nalozi:          'Radni nalozi',
+      materijali:            'Materijali',
+      rad:                   'RAD',
+      narudzbe_papirne_kese: 'Narudžbe papirne kese',
     };
 
     return (
@@ -100,7 +113,7 @@ export function Dashboard(props: DashboardProps) {
               return (
                 <button
                   key={item.id}
-                  onClick={() => { setActiveSection(item.id as MenuSection); setKliseaOpen(false); }}
+                  onClick={() => { setActiveSection(item.id as MenuSection); setKliseaOpen(false); setNarudzbeOpen(false); }}
                   className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${
                     item.primary || isActive ? 'text-white' : 'text-gray-600 hover:bg-gray-100'
                   }`}
@@ -115,7 +128,7 @@ export function Dashboard(props: DashboardProps) {
 
             {/* Klišea s podmenijem */}
             <button
-              onClick={() => setKliseaOpen(!kliseaOpen)}
+              onClick={() => { setKliseaOpen(!kliseaOpen); setNarudzbeOpen(false); }}
               className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${
                 isKliseaActive ? 'text-white' : 'text-gray-600 hover:bg-gray-100'
               }`}
@@ -128,6 +141,24 @@ export function Dashboard(props: DashboardProps) {
                 className={`w-3 h-3 transition-transform ${kliseaOpen ? 'rotate-90' : ''}`}
               />
             </button>
+
+            {/* Narudžbe s podmenijem — samo vlasnik */}
+            {isVlasnik && (
+              <button
+                onClick={() => { setNarudzbeOpen(!narudzbeOpen); setKliseaOpen(false); }}
+                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${
+                  isNarudzbeActive ? 'text-white' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+                style={isNarudzbeActive ? { backgroundColor: SECONDARY } : {}}
+                title="Narudžbe"
+              >
+                <ShoppingCart className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Narudžbe</span>
+                <ChevronRight
+                  className={`w-3 h-3 transition-transform ${narudzbeOpen ? 'rotate-90' : ''}`}
+                />
+              </button>
+            )}
 
           </div>
         )}
@@ -179,6 +210,28 @@ export function Dashboard(props: DashboardProps) {
         >
           <Layers className="w-3 h-3 mr-1 opacity-40" style={{ color: PRIMARY }} />
           {kliseaSubmenu.map((sub) => (
+            <button
+              key={sub.id}
+              onClick={() => setActiveSection(sub.id as MenuSection)}
+              className={`px-2 py-0.5 rounded text-xs whitespace-nowrap transition-all ${
+                activeSection === sub.id ? 'text-white' : 'text-gray-600 hover:bg-gray-100'
+              }`}
+              style={activeSection === sub.id ? { backgroundColor: SECONDARY } : {}}
+            >
+              {sub.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ─── PODMENI NARUDŽBE ─── */}
+      {isVlasnik && narudzbeOpen && (
+        <div
+          className="flex-shrink-0 bg-white flex items-center gap-0.5 px-2 py-1 border-b border-gray-200"
+          style={{ borderLeft: `3px solid ${PRIMARY}` }}
+        >
+          <ShoppingCart className="w-3 h-3 mr-1 opacity-40" style={{ color: PRIMARY }} />
+          {narudzbeSubmenu.map((sub) => (
             <button
               key={sub.id}
               onClick={() => setActiveSection(sub.id as MenuSection)}
