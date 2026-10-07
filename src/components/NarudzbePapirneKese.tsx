@@ -12,6 +12,8 @@ import {
   Search,
   Paperclip,
   Factory,
+  Upload,
+  Eye,
 } from "lucide-react";
 
 const PRIMARY = theme.primary;
@@ -42,6 +44,10 @@ const KOLONE_TABELE: { key: string; label: string; mono?: boolean }[] = [
 // Mrežna mapa s PDF dizajnima klijenata. Preglednik ne daje punu putanju izabranog
 // fajla (samo naziv), pa se putanja slaže kao MAPA_DIZAJNA + naziv fajla.
 const MAPA_DIZAJNA = "\\\\172.16.20.200\\Aplikacije\\Kese_deklaracija\\";
+
+// PDF uploadovan na server — putanja oblika /api/dizajni/2026-10/xxx.pdf
+const UPLOAD_PREFIX = "/api/dizajni/";
+const MAX_PDF_MB = 20;
 
 const vrijednost = (p: Proizvod, key: string): string => {
   const v = p[key];
@@ -157,6 +163,41 @@ export default function NarudzbePapirneKese() {
   const [modalProgress, setModalProgress] = useState(0);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fajl = e.target.files?.[0];
+    e.target.value = "";
+    if (!fajl) return;
+    setUploadError("");
+
+    if (fajl.size > MAX_PDF_MB * 1024 * 1024) {
+      setUploadError(`Fajl je veći od ${MAX_PDF_MB} MB.`);
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const res = await fetch(
+        `${API_URL}/api/dizajni?naziv=${encodeURIComponent(fajl.name)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/pdf" },
+          credentials: "include",
+          body: fajl,
+        }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) setUploadError(data.message || "Greška pri uploadu");
+      else setDodatnaStampa(data.putanja);
+    } catch {
+      setUploadError("Greška pri povezivanju sa serverom");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handlePdfIzbor = (e: React.ChangeEvent<HTMLInputElement>) => {
     const fajl = e.target.files?.[0];
@@ -286,6 +327,7 @@ export default function NarudzbePapirneKese() {
     setStampa(false);
     setVrstaStampe("");
     setDodatnaStampa("");
+    setUploadError("");
     setDimenzija("");
     setOdabraniKlise("");
     setBarkod("");
@@ -496,7 +538,10 @@ export default function NarudzbePapirneKese() {
         </div>
 
         {/* ─── SREDINA — forma narudžbe ─── */}
-        <div className="w-[440px] flex-shrink-0 max-h-full overflow-y-auto bg-white rounded-2xl border border-gray-100 shadow-sm">
+        <div
+          className="w-[484px] flex-shrink-0 max-h-full overflow-y-auto bg-white rounded-2xl border-2 shadow-sm"
+          style={{ borderColor: PRIMARY }}
+        >
           <div
             className="flex items-center gap-2 px-4 py-2.5 border-b border-gray-100"
             style={{ background: "#f4f1f9" }}
@@ -600,29 +645,38 @@ export default function NarudzbePapirneKese() {
                 )}
               </div>
 
-              {/* Štampa */}
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-600 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={stampa}
-                  onChange={(e) => setStampa(e.target.checked)}
-                  className="w-4 h-4"
-                  style={{ accentColor: SECONDARY }}
-                />
-                Sa štampom
-              </label>
+              {/* Štampa + vrsta štampe u istom redu */}
+              <div className="flex items-end gap-2">
+                <label
+                  className="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold cursor-pointer select-none transition-all"
+                  style={{
+                    borderColor: stampa ? SECONDARY : "rgb(229 231 235)",
+                    background: stampa ? `${SECONDARY}15` : "white",
+                    color: stampa ? SECONDARY : "rgb(75 85 99)",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={stampa}
+                    onChange={(e) => setStampa(e.target.checked)}
+                    className="w-4 h-4"
+                    style={{ accentColor: SECONDARY }}
+                  />
+                  Sa štampom
+                </label>
 
-              <div>
-                <Label>Vrsta štampe</Label>
-                <input
-                  type="text"
-                  value={vrstaStampe}
-                  onChange={(e) => setVrstaStampe(e.target.value)}
-                  placeholder="npr. 2 boje"
-                  disabled={!stampa}
-                  className={inputClass}
-                  {...focusProps}
-                />
+                <div className="flex-1 min-w-0">
+                  <Label>Vrsta štampe</Label>
+                  <input
+                    type="text"
+                    value={vrstaStampe}
+                    onChange={(e) => setVrstaStampe(e.target.value)}
+                    placeholder="npr. 2 boje"
+                    disabled={!stampa}
+                    className={inputClass}
+                    {...focusProps}
+                  />
+                </div>
               </div>
 
               <div>
@@ -684,6 +738,29 @@ export default function NarudzbePapirneKese() {
                     <Paperclip size={14} />
                     PDF
                   </button>
+                  {/* Novo — upload PDF-a na server */}
+                  <button
+                    type="button"
+                    onClick={() => uploadInputRef.current?.click()}
+                    disabled={!stampa || uploading}
+                    className="flex-shrink-0 flex items-center gap-1 px-3 rounded-xl text-xs font-semibold text-white transition-all hover:brightness-110 disabled:opacity-40"
+                    style={{ background: PRIMARY }}
+                    title={`Uploaduj PDF na server (do ${MAX_PDF_MB} MB)`}
+                  >
+                    {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                    Upload
+                  </button>
+                  {dodatnaStampa.startsWith(UPLOAD_PREFIX) && (
+                    <a
+                      href={API_URL + dodatnaStampa}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-shrink-0 flex items-center px-2.5 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 transition-all"
+                      title="Otvori PDF"
+                    >
+                      <Eye size={14} />
+                    </a>
+                  )}
                   {/* Skriveni izbor fajla — čita se samo naziv, fajl se ne uploaduje */}
                   <input
                     ref={pdfInputRef}
@@ -692,10 +769,23 @@ export default function NarudzbePapirneKese() {
                     className="hidden"
                     onChange={handlePdfIzbor}
                   />
+                  {/* Skriveni izbor fajla — upload na server */}
+                  <input
+                    ref={uploadInputRef}
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    className="hidden"
+                    onChange={handlePdfUpload}
+                  />
                 </div>
                 <p className="text-[11px] text-gray-400 mt-1">
                   Fajl se ne šalje — upisuje se samo putanja. Ako je PDF u podmapi, ispravi putanju ručno.
                 </p>
+                {uploadError && (
+                  <p className="flex items-center gap-1 text-xs text-red-600 mt-1">
+                    <AlertCircle className="w-3 h-3" /> {uploadError}
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-2">
@@ -743,7 +833,7 @@ export default function NarudzbePapirneKese() {
                   onChange={(e) => setNapomena(e.target.value)}
                   placeholder="Napomena..."
                   maxLength={254}
-                  rows={2}
+                  rows={1}
                   className={`${inputClass} resize-none`}
                   {...focusProps}
                 />

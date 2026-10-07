@@ -10,6 +10,7 @@ import kutijeRoutes from './routes/kutije.routes.js';
 import proizvodiRoutes from './routes/proizvodi.routes.js';
 import narudzbeRoutes from './routes/narudzbe.routes.js';
 import masineRoutes from './routes/masine.routes.js';
+import dizajniRoutes from './routes/dizajni.routes.js';
 
 export const createApp = () => {
   const app = express();
@@ -35,6 +36,7 @@ export const createApp = () => {
   app.use('/api/proizvodi', proizvodiRoutes);
   app.use('/api/narudzbe', narudzbeRoutes);
   app.use('/api/masine', masineRoutes);
+  app.use('/api/dizajni', dizajniRoutes);
 
   return app;
 };
